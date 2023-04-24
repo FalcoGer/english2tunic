@@ -7,43 +7,58 @@ def main() -> None:
         while True:
             sentence = input('Sentence: ')
             output: list[typing.Tuple[str, list[str]]] = []
+
+            # Read dictionary file into memory.
+            pronunciationDictionary = {}
             with open('amepd', 'rt', encoding='utf-8') as f:
-                # Find each word in the sentence in the phenome dictionary
-                for idx, word in enumerate(sentence.split(' ')):
-                    word = word.lower()
-                    output.append((word, []))
+                while origLine := f.readline():
+                    line = origLine.strip()
+                    if line.startswith(';;;'):
+                        continue
+                    line = line.lower()
+                    line = re.sub(r'\(.+\)', '', line)  # multiple pronunciations are marked word(1) ... word(2)
+                    line = re.sub('#.*$', '', line)     # comments are marked with WORD  XX XX XX #@@ { usecase: ...}
+                    line = line.strip()
+                    word = line.split(' ')[0]
+                    phenomes = ' '.join(line.split(' ')[2:])
+                    if not word in pronunciationDictionary:
+                        pronunciationDictionary[word] = []
+                    pronunciationDictionary[word].append(phenomes)
 
-                    # Remove chars such as '!', '?', '.' and ',' from the end of the word.
-                    specialChars, word = removeSpecialChars(word)
-                    # handle special pronunciations first
-                    output[idx] = (word, handleSpecialCases(word))
+            # Find each word in the sentence in the phenome dictionary
+            for idx, word in enumerate(sentence.split(' ')):
+                word = word.lower()
+                output.append((word, []))
 
-                    if len (output[idx][1]) == 0:
-                        f.seek(0x00) # Start of file
-                        while origLine := f.readline():
-                            line = origLine.strip()
-                            if line.startswith(';;;'):
-                                continue
-                            line = line.lower()
-                            line = re.sub(r'\(.+\)', '', line)  # multiple pronounciations are marked word(1) ... word(2)
-                            line = re.sub('#.*$', '', line)     # comments are marked with WORD  XX XX XX #@@ { usecase: ...}
-                            line = line.strip()
-                            if line.split(' ')[0] == word:
-                                phenomes = ' '.join(line.split(' ')[2:])
-                                # print(f'Found: {word}: {phenomes}')
-                                # words are separated from phenomes by a double space.
-                                parsedPhenomes = parsePhenomeLine(phenomes)
-                                if parsedPhenomes not in output[idx][1]:
-                                    output[idx][1].append(parsedPhenomes)
-                        if len(output[idx][1]) == 0:
-                            print(f'Error: Could not find word "{word}" in dictionary.')
-                            output[idx][1].append(word)
-                        elif len(output[idx][1]) > 1:
-                            print(f'Warning: Found multiple matches for {word}:\n{output[idx]}')
+                # Remove chars such as '!', '?', '.' and ',' from the end of the word.
+                specialChars, word = removeSpecialChars(word)
+                # handle special pronunciations first
+                output[idx] = (word, handleSpecialCases(word))
 
-                    # re-append special characters.
-                    for x in range(0, len(output[idx][1])):
-                        output[idx][1][x] += specialChars[::-1]
+                if len (output[idx][1]) != 0:
+                    # already handled special case
+                    continue
+
+                # Translate phenomes from pronunciation dictionary to character string for tunic font.
+                if word in pronunciationDictionary:
+                    for phenomeString in pronunciationDictionary[word]:
+                        parsedPhenomes = parsePhenomeLine(phenomeString)
+                        if parsedPhenomes in output[idx][1]:
+                            # Avoid multiple pronunciations having the same spelling in tunic
+                            # create double entries
+                            continue
+                        output[idx][1].append(parsedPhenomes)
+                else:
+                    # Not in pronunciation dictionary
+                    print(f'Error: Could not find word "{word}" in dictionary.')
+                    output[idx][1].append(word) # just append the word and hope for the best...
+
+                if len(output[idx][1]) > 1:
+                    print(f'Warning: Found multiple matches for {word}:\n{output[idx]}')
+
+                # re-append special characters.
+                for x in range(0, len(output[idx][1])):
+                    output[idx][1][x] += specialChars[::-1]
             # print(f'{output=}')
             for x in output:
                 # x is (word, [['ph1', 'ph2'], ['altph1', 'altph2']])
@@ -78,6 +93,9 @@ def removeSpecialChars(word: str) -> (str, str):
     return specialChars, (word[:-1*len(specialChars)] if len(specialChars) > 0 else word)
 
 def handleSpecialCases(word: str) -> list[list[str]]:
+    # pylint: disable=too-many-return-statements
+    # pylint: disable=too-many-branches
+
     # special cases to match game
     if word == 'a':
         return [['-', 'u']]
@@ -85,12 +103,31 @@ def handleSpecialCases(word: str) -> list[list[str]]:
         return [['dh', 'u']]
 
     # multiple matches
+    if word == 'or':
+        return [['-', 'or']]
+    if word == 'for':
+        return [['f', 'or']]
     if word == 'to':
         return [['t', 'oo']]
-    if word == 'get':
-        return [['g', 'e', 't']]
     if word == 'of':
         return [['v', 'u', '_']]
+
+    if word == 'them':
+        return [['dh', 'e', 'm']]
+
+    if word == 'good':
+        return [['g', 'ou', 'd']]
+    if word == 'enough':
+        return [['n', 'i', '_', 'f', 'u', '_']]
+    if word == 'nice':
+        return [['n', 'ie', 's']]
+
+    if word == 'was':
+        return [['w', 'ah', 'z']]
+    if word == 'wasn\'t':
+        return [['w', 'ah', 'z', 'u', 'n', 't']]
+    if word == 'get':
+        return [['g', 'e', 't']]
     if word == 'use':
         return [['y', 'oo', 's']]
     if word == 'uses':
