@@ -4,26 +4,26 @@ import typing
 
 def main() -> None:
     try:
+        # Read dictionary file into memory.
+        pronunciationDictionary = {}
+        with open('amepd', 'rt', encoding='utf-8') as f:
+            while origLine := f.readline():
+                line = origLine.strip()
+                if line.startswith(';;;'):
+                    continue
+                line = re.sub(r'\(.+\)', '', line)  # multiple pronunciations are marked word(1) ... word(2)
+                line = re.sub('#.*$', '', line)     # comments are marked with WORD  XX XX XX #@@ { usecase: ...}
+                line = line.strip()
+                word = line.split(' ')[0].lower()
+                phenomes = ' '.join(line.split(' ')[2:])
+                if not word in pronunciationDictionary:
+                    pronunciationDictionary[word] = []
+                pronunciationDictionary[word].append(phenomes)
+
+        # Input loop
         while True:
             sentence = input('Sentence: ')
             output: list[typing.Tuple[str, list[str]]] = []
-
-            # Read dictionary file into memory.
-            pronunciationDictionary = {}
-            with open('amepd', 'rt', encoding='utf-8') as f:
-                while origLine := f.readline():
-                    line = origLine.strip()
-                    if line.startswith(';;;'):
-                        continue
-                    line = line.lower()
-                    line = re.sub(r'\(.+\)', '', line)  # multiple pronunciations are marked word(1) ... word(2)
-                    line = re.sub('#.*$', '', line)     # comments are marked with WORD  XX XX XX #@@ { usecase: ...}
-                    line = line.strip()
-                    word = line.split(' ')[0]
-                    phenomes = ' '.join(line.split(' ')[2:])
-                    if not word in pronunciationDictionary:
-                        pronunciationDictionary[word] = []
-                    pronunciationDictionary[word].append(phenomes)
 
             # Find each word in the sentence in the phenome dictionary
             for idx, word in enumerate(sentence.split(' ')):
@@ -135,7 +135,6 @@ def handleSpecialCases(word: str) -> list[list[str]]:
     return []
 
 def parsePhenomeLine(line: str) -> str:
-    line = line.upper()
     line = concatPhenomes(line)
     prevWasConsonant = False        # Was the previous phenome a consonant?
     prevWasVowel = False            # Was the previous phenome a vowel?
