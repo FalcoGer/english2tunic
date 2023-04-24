@@ -102,6 +102,16 @@ def handleSpecialCases(word: str) -> list[list[str]]:
     if word == 'the':
         return [['dh', 'u']]
 
+    # not in dictionary but in game
+    if word == 'annealed':
+        return [['n', 'a', '_', 'l', 'ee', '_', 'd', 'e', '_']]
+    if word == 'sarcophagi':
+        return [['s', 'ar', 'k', 'ah', 'f', 'u', 'g', 'ie']]
+    if word == 'uncountable':
+        return [['n', 'u', '_', 'k', 'ow', 'n', 't', 'a', 'b', 'a', 'l']]
+    if word == 'oubliette':
+        return [['b', 'oo', '_', 'l', 'ee', 't', 'e', '_']]
+
     # multiple matches
     if word == 'or':
         return [['-', 'or']]
@@ -114,6 +124,9 @@ def handleSpecialCases(word: str) -> list[list[str]]:
 
     if word == 'them':
         return [['dh', 'e', 'm']]
+
+    if word == 'lever':
+        return [['l', 'ee', 'v', 'ir']]
 
     if word == 'good':
         return [['g', 'ou', 'd']]
